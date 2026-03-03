@@ -19,9 +19,9 @@ This application is under active development, want to support us? Give us a star
 > **This project is human-led and human-reviewed.** Every line of code is understood, validated, and owned by a real person. This is not a vibe-coded AI slop project, and automated agents or fully AI-generated contributions are not welcome here. See the [contributing guide](https://github.com/transmute-app/transmute?tab=contributing-ov-file#no-autonomous-agents-or-ai-assistants) for more details
 
 ## Screenshots
-| Converter / Home | File Lists | Settings |
-| --- | --- | --- |
-| <img src="https://raw.githubusercontent.com/transmute-app/transmute/refs/heads/main/assets/screenshots/converter.png" width=100%> | <img src="https://raw.githubusercontent.com/transmute-app/transmute/refs/heads/main/assets/screenshots/files.png" width=100%> | <img src="https://raw.githubusercontent.com/transmute-app/transmute/refs/heads/main/assets/screenshots/settings.png" width=100%> |
+| Converter / Home | Uploaded Files | Previsouly Converted | Settings |
+| --- | --- | --- | --- |
+| <img src="https://raw.githubusercontent.com/transmute-app/transmute/refs/heads/main/assets/screenshots/converter.png" width=100%> | <img src="https://raw.githubusercontent.com/transmute-app/transmute/refs/heads/main/assets/screenshots/files.png" width=100%> | <img src="https://raw.githubusercontent.com/transmute-app/transmute/refs/heads/main/assets/screenshots/history.png" width=100%> | <img src="https://raw.githubusercontent.com/transmute-app/transmute/refs/heads/main/assets/screenshots/settings.png" width=100%> |
 
 <!-- PRE_GIF_MARKER 
 <div align="center">
