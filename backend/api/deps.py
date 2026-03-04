@@ -1,39 +1,43 @@
 """FastAPI dependency injection functions for database connections."""
-from typing import Generator
+from functools import lru_cache
 from db import FileDB, ConversionDB, ConversionRelationsDB, SettingsDB
 
 
-def get_file_db() -> Generator[FileDB, None, None]:
-    """Dependency that provides a FileDB instance and ensures cleanup."""
-    db = FileDB()
-    try:
-        yield db
-    finally:
-        db.close()
+@lru_cache(maxsize=1)
+def _file_db() -> FileDB:
+    return FileDB()
 
 
-def get_conversion_db() -> Generator[ConversionDB, None, None]:
-    """Dependency that provides a ConversionDB instance and ensures cleanup."""
-    db = ConversionDB()
-    try:
-        yield db
-    finally:
-        db.close()
+@lru_cache(maxsize=1)
+def _conversion_db() -> ConversionDB:
+    return ConversionDB()
 
 
-def get_conversion_relations_db() -> Generator[ConversionRelationsDB, None, None]:
-    """Dependency that provides a ConversionRelationsDB instance and ensures cleanup."""
-    db = ConversionRelationsDB()
-    try:
-        yield db
-    finally:
-        db.close()
+@lru_cache(maxsize=1)
+def _conversion_relations_db() -> ConversionRelationsDB:
+    return ConversionRelationsDB()
 
 
-def get_settings_db() -> Generator[SettingsDB, None, None]:
-    """Dependency that provides a SettingsDB instance and ensures cleanup."""
-    db = SettingsDB()
-    try:
-        yield db
-    finally:
-        db.close()
+@lru_cache(maxsize=1)
+def _settings_db() -> SettingsDB:
+    return SettingsDB()
+
+
+def get_file_db() -> FileDB:
+    """Dependency that provides a shared FileDB instance."""
+    return _file_db()
+
+
+def get_conversion_db() -> ConversionDB:
+    """Dependency that provides a shared ConversionDB instance."""
+    return _conversion_db()
+
+
+def get_conversion_relations_db() -> ConversionRelationsDB:
+    """Dependency that provides a shared ConversionRelationsDB instance."""
+    return _conversion_relations_db()
+
+
+def get_settings_db() -> SettingsDB:
+    """Dependency that provides a shared SettingsDB instance."""
+    return _settings_db()

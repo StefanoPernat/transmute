@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 from typing import Optional
 from core import get_settings, validate_sql_identifier, migrate_table_columns
 
@@ -35,8 +36,15 @@ class ConversionRelationsDB:
         """Initialize ConversionRelationsDB, validate the table name, and create tables."""
         # Validate and lock table name — immutable after init
         object.__setattr__(self, '_table_name', validate_sql_identifier(self._TABLE_NAME))
-        self.conn = sqlite3.connect(self.DB_PATH, check_same_thread=False)
+        self._local = threading.local()
         self.create_tables()
+
+    @property
+    def conn(self) -> sqlite3.Connection:
+        """Return a thread-local SQLite connection, creating one if needed."""
+        if not hasattr(self._local, 'conn') or self._local.conn is None:
+            self._local.conn = sqlite3.connect(self.DB_PATH)
+        return self._local.conn
 
     def create_tables(self) -> None:
         """Create the conversion relations table if it does not already exist."""
@@ -175,6 +183,7 @@ class ConversionRelationsDB:
         return [dict(row) for row in rows]
 
     def close(self) -> None:
-        """Close the database connection."""
-        if self.conn:
-            self.conn.close()
+        """Close the current thread's database connection."""
+        if hasattr(self._local, 'conn') and self._local.conn:
+            self._local.conn.close()
+            self._local.conn = None
