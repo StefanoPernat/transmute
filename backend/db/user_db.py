@@ -96,7 +96,7 @@ class UserDB:
             "username": "TEXT",
             "email": "TEXT",
             "full_name": "TEXT",
-            "hashed_password": "TEXT",
+            "hashed_password": "TEXT",  # nosec B105, false positive hardcoded password: 'TEXT'
             "role": f"TEXT NOT NULL DEFAULT '{UserRole.MEMBER.value}'",
             "disabled": "INTEGER NOT NULL DEFAULT 0",
         })
@@ -218,6 +218,17 @@ class UserDB:
                 (username, exclude_uuid)
             )
         return cursor.fetchone() is not None
+
+    def count_users(self) -> int:
+        """Return the total number of users in the database."""
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}")  # nosec B608
+        row = cursor.fetchone()
+        return int(row[0]) if row is not None else 0
+
+    def has_users(self) -> bool:
+        """Return whether at least one user exists."""
+        return self.count_users() > 0
 
     def list_users(self) -> list[dict]:
         """Retrieve all users from the database."""

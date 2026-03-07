@@ -4,6 +4,7 @@ from .conversion_relations_db import ConversionRelationsDB
 from .settings_db import SettingsDB, Theme
 from .default_formats_db import DefaultFormatsDB
 from .user_db import UserDB, UserRole
+from .api_key_db import ApiKeyDB
 
 __all__ = [
 	"FileDB",
@@ -14,4 +15,5 @@ __all__ = [
 	"DefaultFormatsDB",
 	"UserDB",
 	"UserRole",
+	"ApiKeyDB",
 ]
