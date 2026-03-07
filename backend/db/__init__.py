@@ -3,5 +3,15 @@ from .conversion_db import ConversionDB
 from .conversion_relations_db import ConversionRelationsDB
 from .settings_db import SettingsDB, Theme
 from .default_formats_db import DefaultFormatsDB
+from .user_db import UserDB, UserRole
 
-__all__ = ["FileDB", "ConversionDB", "ConversionRelationsDB", "SettingsDB", "Theme", "DefaultFormatsDB"]
+__all__ = [
+	"FileDB",
+	"ConversionDB",
+	"ConversionRelationsDB",
+	"SettingsDB",
+	"Theme",
+	"DefaultFormatsDB",
+	"UserDB",
+	"UserRole",
+]
