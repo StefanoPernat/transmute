@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTheme, type ThemeName } from '../ThemeContext'
+import { useAuth } from '../AuthContext'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { authFetch as fetch } from '../utils/api'
 
 interface Theme {
   value: string
@@ -56,6 +58,7 @@ interface AppSettings {
 
 function Settings() {
   const { theme, setTheme, setKeepOriginals } = useTheme()
+  const { isAdmin } = useAuth()
   const [autoDownload, setAutoDownload] = useState(false)
   const [saveOriginals, setSaveOriginals] = useState(true)
   const [cleanupEnabled, setCleanupEnabled] = useState(true)
@@ -145,10 +148,15 @@ function Settings() {
     setSaving(true)
     setError(null)
     try {
+      const payload: Record<string, unknown> = { theme, auto_download: autoDownload, keep_originals: saveOriginals }
+      if (isAdmin) {
+        payload.cleanup_enabled = cleanupEnabled
+        payload.cleanup_ttl_minutes = cleanupTtl
+      }
       const response = await fetch('/api/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme, auto_download: autoDownload, keep_originals: saveOriginals, cleanup_enabled: cleanupEnabled, cleanup_ttl_minutes: cleanupTtl }),
+        body: JSON.stringify(payload),
       })
       if (!response.ok) throw new Error('Failed to save settings')
       setKeepOriginals(saveOriginals)
@@ -362,10 +370,12 @@ function Settings() {
                 <div>
                   <p className="text-text font-medium">Cleanup TTL</p>
                   <p className="text-text-muted text-sm">Automatically clean up uploads & conversions after a set time</p>
+                  {!isAdmin && <p className="text-text-muted text-xs italic mt-1">Managed by an administrator</p>}
                 </div>
                 <button
                   onClick={() => setCleanupEnabled(v => !v)}
-                  className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${cleanupEnabled ? 'bg-success' : 'bg-surface-dark border border-surface-light'}`}
+                  disabled={!isAdmin}
+                  className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${cleanupEnabled ? 'bg-success' : 'bg-surface-dark border border-surface-light'} ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <span
                     className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${cleanupEnabled ? 'translate-x-6' : 'translate-x-0'}`}
@@ -380,9 +390,10 @@ function Settings() {
                   <p className="text-text-muted text-sm">Minutes before uploads & conversions are cleaned up</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-surface-dark border border-surface-light rounded-lg overflow-hidden">
+                  <div className={`flex items-center bg-surface-dark border border-surface-light rounded-lg overflow-hidden ${!isAdmin ? 'opacity-50 pointer-events-none' : ''}`}>
                     <button
                       onClick={() => setCleanupTtl(v => Math.max(1, v - 1))}
+                      disabled={!isAdmin}
                       className="px-3 py-2 text-text-muted hover:text-text hover:bg-surface-light transition-colors duration-150 text-base leading-none select-none"
                       aria-label="Decrease"
                     >−</button>
@@ -391,11 +402,13 @@ function Settings() {
                       min={1}
                       max={10080}
                       value={cleanupTtl}
+                      disabled={!isAdmin}
                       onChange={e => setCleanupTtl(Math.max(1, parseInt(e.target.value) || 1))}
                       className="w-16 bg-transparent text-text text-sm text-center py-2 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                     <button
                       onClick={() => setCleanupTtl(v => Math.min(10080, v + 1))}
+                      disabled={!isAdmin}
                       className="px-3 py-2 text-text-muted hover:text-text hover:bg-surface-light transition-colors duration-150 text-base leading-none select-none"
                       aria-label="Increase"
                     >+</button>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FileTable, { FileInfo } from '../components/FileTable'
 import PreviewModal, { isPreviewable } from '../components/PreviewModal'
+import { authFetch as fetch } from '../utils/api'
 
 function Files() {
   const [files, setFiles] = useState<FileInfo[]>([])

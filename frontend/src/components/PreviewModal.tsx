@@ -31,6 +31,7 @@ import toml from 'react-syntax-highlighter/dist/esm/languages/prism/toml'
 import ini from 'react-syntax-highlighter/dist/esm/languages/prism/ini'
 import diff from 'react-syntax-highlighter/dist/esm/languages/prism/diff'
 import batch from 'react-syntax-highlighter/dist/esm/languages/prism/batch'
+import { authFetch as fetch } from '../utils/api'
 
 SyntaxHighlighter.registerLanguage('javascript', javascript)
 SyntaxHighlighter.registerLanguage('typescript', typescript)
@@ -596,9 +597,8 @@ function PreviewModal({ fileId, filename, mediaType, onClose }: PreviewModalProp
   const url = `/api/files/${encodeURIComponent(fileId)}`
   const [textContent, setTextContent] = useState<string | null>(null)
   const [textLoading, setTextLoading] = useState(false)
-
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
-  const [pdfLoading, setPdfLoading] = useState(false)
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null)
+  const [mediaLoading, setMediaLoading] = useState(false)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -619,20 +619,23 @@ function PreviewModal({ fileId, filename, mediaType, onClose }: PreviewModalProp
   }, [url, previewType])
 
   useEffect(() => {
-    if (previewType !== 'pdf') return
-    setPdfLoading(true)
+    if (!previewType || previewType === 'text') return
+    setMediaLoading(true)
     let objectUrl: string | null = null
     fetch(url)
       .then(r => r.blob())
       .then(blob => {
-        const pdfBlob = new Blob([blob], { type: 'application/pdf' })
-        objectUrl = URL.createObjectURL(pdfBlob)
-        setPdfUrl(objectUrl)
+        const normalizedBlob = previewType === 'pdf'
+          ? new Blob([blob], { type: 'application/pdf' })
+          : blob
+        objectUrl = URL.createObjectURL(normalizedBlob)
+        setMediaUrl(objectUrl)
       })
-      .catch(() => setPdfUrl(null))
-      .finally(() => setPdfLoading(false))
+      .catch(() => setMediaUrl(null))
+      .finally(() => setMediaLoading(false))
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl)
+      setMediaUrl(null)
     }
   }, [url, previewType])
 
@@ -662,32 +665,44 @@ function PreviewModal({ fileId, filename, mediaType, onClose }: PreviewModalProp
         {/* Content */}
         <div className="overflow-auto p-6 flex items-center justify-center min-w-[300px] min-h-[200px]">
           {previewType === 'image' && (
-            <img
-              src={url}
-              alt={filename}
-              className="max-w-[80vw] max-h-[75vh] object-contain rounded"
-            />
+            mediaLoading
+              ? <p className="text-text-muted text-sm">Loading...</p>
+              : mediaUrl
+                ? <img
+                    src={mediaUrl}
+                    alt={filename}
+                    className="max-w-[80vw] max-h-[75vh] object-contain rounded"
+                  />
+                : <p className="text-text-muted text-sm">Failed to load image preview.</p>
           )}
           {previewType === 'video' && (
-            <VideoPlayer src={url} />
+            mediaLoading
+              ? <p className="text-text-muted text-sm">Loading...</p>
+              : mediaUrl
+                ? <VideoPlayer src={mediaUrl} />
+                : <p className="text-text-muted text-sm">Failed to load video preview.</p>
           )}
           {previewType === 'audio' && (
-            <div className="flex flex-col items-center gap-6 w-[36rem] max-w-[80vw] px-4">
-              <div className="w-28 h-28 rounded-full bg-primary/10 flex items-center justify-center">
-                <FaMusic className="text-4xl text-primary" />
-              </div>
-              <span className="text-sm text-text-muted font-medium text-center truncate max-w-full" title={filename}>
-                {filename}
-              </span>
-              <AudioPlayer src={url} mediaType={mediaType} />
-            </div>
+            mediaLoading
+              ? <p className="text-text-muted text-sm">Loading...</p>
+              : mediaUrl
+                ? <div className="flex flex-col items-center gap-6 w-[36rem] max-w-[80vw] px-4">
+                    <div className="w-28 h-28 rounded-full bg-primary/10 flex items-center justify-center">
+                      <FaMusic className="text-4xl text-primary" />
+                    </div>
+                    <span className="text-sm text-text-muted font-medium text-center truncate max-w-full" title={filename}>
+                      {filename}
+                    </span>
+                    <AudioPlayer src={mediaUrl} mediaType={mediaType} />
+                  </div>
+                : <p className="text-text-muted text-sm">Failed to load audio preview.</p>
           )}
           {previewType === 'pdf' && (
-            pdfLoading
+            mediaLoading
               ? <p className="text-text-muted text-sm">Loading...</p>
-              : pdfUrl
+              : mediaUrl
                 ? <iframe
-                    src={pdfUrl}
+                    src={mediaUrl}
                     title={filename}
                     className="w-[80vw] h-[75vh] rounded border-0"
                   />

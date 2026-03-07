@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import FileTable, { FileInfo, ConversionInfo } from '../components/FileTable'
 import PreviewModal, { isPreviewable } from '../components/PreviewModal'
+import { authFetch as fetch } from '../utils/api'
 
 interface OriginalFileInfo {
   id: string

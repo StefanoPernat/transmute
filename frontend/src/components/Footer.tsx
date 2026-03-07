@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FaGithub, FaExternalLinkAlt, FaBook } from 'react-icons/fa'
+import { publicFetch as fetch } from '../utils/api'
 
 function Footer() {
   const [appInfo, setAppInfo] = useState<{ name: string; version: string } | null>(null)

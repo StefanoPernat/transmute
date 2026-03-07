@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useAuth } from './AuthContext'
+import { authFetch as fetch } from './utils/api'
 
 export type ThemeName = 'rubedo' | 'citrinitas' | 'viriditas' | 'nigredo' | 'albedo' | 'aurora' | 'caelum'
 
@@ -43,6 +45,7 @@ function readStoredKeepOriginals(): boolean {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const { status } = useAuth()
   // Initialise from localStorage so React state matches what the blocking
   // script already applied to the DOM — avoids a redundant re-render.
   const [theme, setThemeState] = useState<ThemeName>(readStoredTheme)
@@ -61,6 +64,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // On mount, validate against the backend (authoritative source of truth).
   // If another browser changed the theme, this corrects localStorage too.
   useEffect(() => {
+    if (status !== 'authenticated') return
     fetch('/api/settings')
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
@@ -84,7 +88,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         })
       })
       .catch(() => {/* keep whatever localStorage had */})
-  }, [])
+  }, [status])
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, keepOriginals, setKeepOriginals }}>
