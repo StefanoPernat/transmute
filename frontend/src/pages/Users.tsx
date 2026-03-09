@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth, type AuthUser, type UserRole } from '../AuthContext'
+import PasswordField from '../components/PasswordField'
 import { apiJson } from '../utils/api'
 
 interface UserDraft {
@@ -197,7 +198,7 @@ function Users() {
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-text">Password</label>
-            <input value={createDraft.password} onChange={event => setCreateDraft(prev => ({ ...prev, password: event.target.value }))} className="w-full rounded-lg border border-surface-light bg-surface-dark px-4 py-3 text-sm text-text outline-none focus:ring-2 focus:ring-primary/20" type="password" required minLength={8} />
+            <PasswordField value={createDraft.password} onChange={event => setCreateDraft(prev => ({ ...prev, password: event.target.value }))} inputClassName="rounded-lg border border-surface-light bg-surface-dark px-4 py-3 text-sm text-text outline-none focus:ring-2 focus:ring-primary/20" toggleButtonClassName="rounded-lg border border-surface-light bg-surface-dark px-4 text-text-muted transition hover:bg-primary/20 hover:text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/20" required minLength={8} />
             <p className="mt-1 text-xs text-text-muted">Must be at least 8 characters.</p>
           </div>
           <div className="flex items-end gap-4 md:col-span-2">
@@ -245,7 +246,7 @@ function Users() {
                     </label>
                     <label>
                       <span className="mb-2 block text-sm font-medium text-text">New password</span>
-                      <input value={draft.password} onChange={event => updateDraft(user.uuid, 'password', event.target.value)} className="w-full rounded-lg border border-surface-light bg-surface-dark px-4 py-3 text-sm text-text outline-none focus:ring-2 focus:ring-primary/20" type="password" placeholder="Leave blank to keep current" minLength={8} />
+                      <PasswordField value={draft.password} onChange={event => updateDraft(user.uuid, 'password', event.target.value)} inputClassName="rounded-lg border border-surface-light bg-surface-dark px-4 py-3 text-sm text-text outline-none focus:ring-2 focus:ring-primary/20" toggleButtonClassName="rounded-lg border border-surface-light bg-surface-dark px-4 text-text-muted transition hover:bg-primary/20 hover:text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Leave blank to keep current" minLength={8} />
                       <p className="mt-1 text-xs text-text-muted">Min 8 characters if changing.</p>
                     </label>
                     <label>

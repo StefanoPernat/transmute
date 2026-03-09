@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { FaKey, FaUserPlus } from 'react-icons/fa6'
 import { useAuth } from '../AuthContext'
+import PasswordField from '../components/PasswordField'
 
 function Auth() {
   const navigate = useNavigate()
@@ -92,12 +93,12 @@ function Auth() {
 
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-text">Password</span>
-                <input
+                <PasswordField
                   value={password}
                   onChange={event => setPassword(event.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-surface-light/70 px-4 py-3 text-text outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                  inputClassName="rounded-xl border border-white/10 bg-surface-light/70 px-4 py-3 text-text outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                  toggleButtonClassName="rounded-xl border border-white/10 bg-surface-light/70 px-4 text-text-muted transition hover:text-text focus:outline-none focus:ring-2 focus:ring-primary/20"
                   placeholder="••••••••"
-                  type="password"
                   required
                   minLength={requiresSetup ? 8 : undefined}
                 />

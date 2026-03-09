@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FaCopy, FaKey, FaPlus, FaTrash } from 'react-icons/fa6'
 import { useAuth } from '../AuthContext'
+import PasswordField from '../components/PasswordField'
 import { apiJson } from '../utils/api'
 
 interface ApiKey {
@@ -150,7 +151,7 @@ function Account() {
             </label>
             <label className="block md:col-span-2">
               <span className="mb-2 block text-sm font-medium text-text">New password</span>
-              <input value={password} onChange={event => setPassword(event.target.value)} className="w-full rounded-lg border border-surface-light bg-surface-dark px-4 py-3 text-sm text-text outline-none focus:ring-2 focus:ring-primary/20" type="password" placeholder="Leave blank to keep the current password" minLength={8} />
+              <PasswordField value={password} onChange={event => setPassword(event.target.value)} inputClassName="rounded-lg border border-surface-light bg-surface-dark px-4 py-3 text-sm text-text outline-none focus:ring-2 focus:ring-primary/20" toggleButtonClassName="rounded-lg border border-surface-light bg-surface-dark px-4 text-text-muted transition hover:bg-primary/20 hover:text-primary-light focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Leave blank to keep the current password" minLength={8} />
               <p className="mt-1 text-xs text-text-muted">Min 8 characters if changing.</p>
             </label>
           </div>
