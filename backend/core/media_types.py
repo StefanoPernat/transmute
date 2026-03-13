@@ -12,4 +12,5 @@ media_type_aliases = {
     'mpg': 'mpeg',
     'asciidoc': 'adoc',
     'latex': 'tex',
+    'tif': 'tiff',
 }
