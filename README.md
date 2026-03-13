@@ -21,7 +21,8 @@ This application is under active development. Want to support us? Give us a star
 
 > [!NOTE]
 > **This project is human-led and maintainer-reviewed.**
-> AI tools may be used during development, but all code is intentionally written, reviewed, and validated by a human who understands and takes responsibility for the result. This is not an autonomously generated project, and fully AI-generated or agent-submitted contributions are not accepted. See the [contributing guide](https://github.com/transmute-app/transmute?tab=contributing-ov-file#no-autonomous-agents-or-ai-assistants) for more details
+>
+> AI tools may be used during development (autocomplete, some boilerplate) but all code is intentionally written, reviewed, and validated by a human who understands and takes responsibility for the result. This is not an autonomously generated project, and fully AI-generated or agent-submitted contributions are not accepted. See the [contributing guide](https://github.com/transmute-app/transmute?tab=contributing-ov-file#no-autonomous-agents-or-ai-assistants) for more details
 
 ## Screenshots
 | Converter / Home | Uploaded Files | Previously Converted | Settings |
