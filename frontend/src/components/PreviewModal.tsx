@@ -140,7 +140,7 @@ const PREVIEWABLE_TEXT = new Set([
   'sql', 'py', 'rb', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go',
   'rs', 'swift', 'kt', 'sh', 'bash', 'zsh', 'bat', 'ps1',
   'tsx', 'jsx', 'scss', 'sass', 'less', 'graphql', 'gql',
-  'rst', 'tex', 'tsv', 'diff', 'patch', 'toon'
+  'rst', 'tex', 'tsv', 'diff', 'patch', 'toon', 'jsonl'
 ])
 
 type PreviewType = 'image' | 'video' | 'audio' | 'pdf' | 'text' | null
@@ -400,7 +400,7 @@ const EXT_TO_LANGUAGE: Record<string, string> = {
   toml: 'toml', ini: 'ini', diff: 'diff', patch: 'diff',
   srt: 'plain', ass: 'plain', vtt: 'plain', log: 'plain',
   env: 'bash', conf: 'bash', cfg: 'bash', properties: 'bash',
-  tsv: 'plain', txt: 'plain',
+  tsv: 'plain', txt: 'plain', jsonl: 'json',
 }
 
 const RAINBOW_COLUMN_COLORS = [
