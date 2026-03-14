@@ -24,7 +24,6 @@ on:
       - 'docker/**'
       - 'frontend/**'
       - 'backend/**'
-      - 'docker/**'
       - 'requirements.txt'
 
 env:
@@ -116,7 +115,7 @@ jobs:
             VCS_REF=${{ github.sha }}
             BUILD_DATE=${{ steps.release_context.outputs.build_date }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,oci-mediatypes=true
+          outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,oci-mediatypes=true,push=true
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
           provenance: false
