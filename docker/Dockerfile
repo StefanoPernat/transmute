@@ -14,6 +14,7 @@ FROM python:3.13-slim
 ARG BUILD_VERSION="dev"
 ARG CALIBRE_VERSION="9.5.0"
 ARG PANDOC_VERSION="3.9"
+ARG DRAWIO_VERSION="29.6.1"
 
 # Set working directory
 WORKDIR /app
@@ -51,8 +52,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 
-# Install upstream Pandoc to keep reader/writer support consistent across
-# local development and container builds.
+# Install Pandoc from upstream GitHub releases to avoid stale distro packages.
 RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" && \
     case "$ARCH" in \
       amd64) PANDOC_ARCH="amd64" ;; \
@@ -67,16 +67,14 @@ RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" && \
     rm -rf /tmp/pandoc.tar.gz /tmp/pandoc-${PANDOC_VERSION}
 
 
-# Install Draw.io
-# Use TARGETARCH to determine the architecture and download the appropriate 
-# Draw.io .deb package, fall back to dpkg --print-architecture if TARGETARCH is 
-# not set (for older Docker versions)
+# Install Draw.io from upstream GitHub releases to avoid stale distro packages.
 RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" && \
-    if [ "$ARCH" = "amd64" ]; then \
-      DRAWIO_URL="https://github.com/jgraph/drawio-desktop/releases/download/v29.3.6/drawio-amd64-29.3.6.deb"; \
-    else \
-      DRAWIO_URL="https://github.com/jgraph/drawio-desktop/releases/download/v29.3.6/drawio-arm64-29.3.6.deb"; \
-    fi && \
+    case "$ARCH" in \
+      amd64) DRAWIO_ARCH="amd64" ;; \
+      arm64) DRAWIO_ARCH="arm64" ;; \
+      *) echo "Unsupported architecture for drawio: $ARCH" >&2; exit 1 ;; \
+    esac && \
+    DRAWIO_URL="https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-${DRAWIO_ARCH}-${DRAWIO_VERSION}.deb"; \
     wget -q "$DRAWIO_URL" -O /tmp/drawio.deb && \
     apt-get update && apt-get install -y /tmp/drawio.deb && \
     rm /tmp/drawio.deb && \
