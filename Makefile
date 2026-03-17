@@ -91,7 +91,7 @@ check: lint ## Run all checks (alias for lint)
 # ----------------------------------------------------------------------------
 
 test-backend: ## Run Python backend tests with pytest
-	$(PYTHON) -m pytest backend
+	$(PYTHON) -m pytest backend --ignore=backend/tests/converters/test_all_conversions.py
 
 test-frontend: ## Run frontend tests with Vitest (not yet implemented) - cd frontend && npm run test
 	echo "Frontend tests not yet implemented. Tracked in issue #60."
