@@ -1,4 +1,4 @@
-name: Bandit Security Scan
+name: Security Scans
 
 on:
   push:
