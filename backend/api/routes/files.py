@@ -129,7 +129,7 @@ async def upload_file(
 
 @router.get(
     "/{file_id}",
-    summary="Download a converted file",
+    summary="Download a file (either converted or original) based on file ID",
     response_class=FileResponse,
     responses={
         200: {
