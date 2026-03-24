@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { AUTH_EXPIRED_EVENT, apiJson, getStoredToken, setStoredToken } from './utils/api'
 
-export type UserRole = 'admin' | 'member'
+export type UserRole = 'admin' | 'member' | 'guest'
 
 export interface AuthUser {
   uuid: string
@@ -10,6 +10,7 @@ export interface AuthUser {
   full_name: string | null
   role: UserRole
   disabled: boolean
+  is_guest: boolean
 }
 
 interface BootstrapStatus {
@@ -41,6 +42,7 @@ interface AuthContextValue {
   isAdmin: boolean
   login: (input: LoginInput) => Promise<void>
   createBootstrapUser: (input: BootstrapInput) => Promise<void>
+  loginAsGuest: () => Promise<void>
   logout: () => void
   refreshUser: () => Promise<void>
   replaceUser: (user: AuthUser) => void
@@ -53,6 +55,7 @@ const AuthContext = createContext<AuthContextValue>({
   isAdmin: false,
   login: async () => {},
   createBootstrapUser: async () => {},
+  loginAsGuest: async () => {},
   logout: () => {},
   refreshUser: async () => {},
   replaceUser: () => {},
@@ -110,6 +113,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { auth: false },
     )
     await login({ username, password })
+  }
+
+  const loginAsGuest = async () => {
+    const payload = await apiJson<AuthResponse>(
+      '/api/guest/session',
+      { method: 'POST' },
+      { auth: false },
+    )
+    applyAuthResponse(payload)
   }
 
   useEffect(() => {
@@ -188,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: user?.role === 'admin',
         login,
         createBootstrapUser,
+        loginAsGuest,
         logout,
         refreshUser,
         replaceUser,

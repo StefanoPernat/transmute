@@ -100,37 +100,41 @@ function Header() {
                     <p className="mt-1 text-xs uppercase tracking-[0.18em] text-text-muted">{user?.role}</p>
                   </div>
                   <div className="p-2">
-                    <NavLink
-                      to="/account"
-                      onClick={() => setMenuOpen(false)}
-                      className={({ isActive }) =>
-                        `flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-200 ${isActive ? 'bg-primary/10 text-primary-light' : 'text-text hover:bg-surface-light hover:text-primary'}`
-                      }
-                    >
-                      <FaUser className="text-sm" />
-                      My Account
-                    </NavLink>
-                    <NavLink
-                      to="/settings"
-                      onClick={() => setMenuOpen(false)}
-                      className={({ isActive }) =>
-                        `mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-200 ${isActive ? 'bg-primary/10 text-primary-light' : 'text-text hover:bg-surface-light hover:text-primary'}`
-                      }
-                    >
-                      <FaGear className="text-sm" />
-                      Settings
-                    </NavLink>
-                    {isAdmin && (
-                      <NavLink
-                        to="/admin/users"
-                        onClick={() => setMenuOpen(false)}
-                        className={({ isActive }) =>
-                          `mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-200 ${isActive ? 'bg-primary/10 text-primary-light' : 'text-text hover:bg-surface-light hover:text-primary'}`
-                        }
-                      >
-                        <FaUsers className="text-sm" />
-                        User Management
-                      </NavLink>
+                    {!user?.is_guest && (
+                      <>
+                        <NavLink
+                          to="/account"
+                          onClick={() => setMenuOpen(false)}
+                          className={({ isActive }) =>
+                            `flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-200 ${isActive ? 'bg-primary/10 text-primary-light' : 'text-text hover:bg-surface-light hover:text-primary'}`
+                          }
+                        >
+                          <FaUser className="text-sm" />
+                          My Account
+                        </NavLink>
+                        <NavLink
+                          to="/settings"
+                          onClick={() => setMenuOpen(false)}
+                          className={({ isActive }) =>
+                            `mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-200 ${isActive ? 'bg-primary/10 text-primary-light' : 'text-text hover:bg-surface-light hover:text-primary'}`
+                          }
+                        >
+                          <FaGear className="text-sm" />
+                          Settings
+                        </NavLink>
+                        {isAdmin && (
+                          <NavLink
+                            to="/admin/users"
+                            onClick={() => setMenuOpen(false)}
+                            className={({ isActive }) =>
+                              `mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-200 ${isActive ? 'bg-primary/10 text-primary-light' : 'text-text hover:bg-surface-light hover:text-primary'}`
+                            }
+                          >
+                            <FaUsers className="text-sm" />
+                            User Management
+                          </NavLink>
+                        )}
+                      </>
                     )}
                     <button
                       type="button"

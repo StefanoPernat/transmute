@@ -73,6 +73,16 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function RejectGuest({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+
+  if (user?.is_guest) {
+    return <Navigate to="/" replace />
+  }
+
+  return <>{children}</>
+}
+
 function AppRoutes() {
   const { keepOriginals } = useTheme()
   const { status } = useAuth()
@@ -90,8 +100,8 @@ function AppRoutes() {
         }
       />
       <Route path="/history" element={<RequireAuth><History /></RequireAuth>} />
-      <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
-      <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
+      <Route path="/settings" element={<RequireAuth><RejectGuest><Settings /></RejectGuest></RequireAuth>} />
+      <Route path="/account" element={<RequireAuth><RejectGuest><Account /></RejectGuest></RequireAuth>} />
       <Route path="/admin/users" element={<RequireAuth><RequireAdmin><Users /></RequireAdmin></RequireAuth>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

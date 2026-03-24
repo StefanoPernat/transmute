@@ -85,7 +85,7 @@ class BatchDownloadRequest(BaseModel):
 
 
 ThemeValue = Literal["rubedo", "citrinitas", "viriditas", "nigredo", "albedo", "aurora", "caelum", "argentum"]
-UserRoleValue = Literal["admin", "member"]
+UserRoleValue = Literal["admin", "member", "guest"]
 
 
 class AppSettingsResponse(BaseModel):
@@ -121,6 +121,7 @@ class UserResponse(BaseModel):
     full_name: Optional[str] = Field(None, example="Alice Example", description="Optional full name")
     role: UserRoleValue = Field(..., example="member", description="Assigned role")
     disabled: bool = Field(..., example=False, description="Whether the account is disabled")
+    is_guest: bool = Field(False, example=False, description="Whether this is a guest account")
 
 
 class UserListResponse(BaseModel):

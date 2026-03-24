@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     oidc_display_name: str = "SSO"
     oidc_auto_create_users: bool = True
 
+    # ===== Guest Access =====
+    allow_unauthenticated: bool = False
+
     # ===== Server =====
 
     # http://192.168.1.1:3313
