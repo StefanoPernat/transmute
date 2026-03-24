@@ -51,7 +51,7 @@ def create_guest_session(
             )
             return {
                 "access_token": access_token,
-                "token_type": "bearer",
+                "token_type": "bearer",  # nosec B105 - this is just a string in the response body, not an actual cookie or header
                 "expires_in": expires_in,
                 "user": _serialize_guest(user),
             }
@@ -66,7 +66,7 @@ def create_guest_session(
         "username": username,
         "email": None,
         "full_name": None,
-        "hashed_password": "!guest-no-password",
+        "hashed_password": "!guest-no-password",  # nosec B105 - this password is never used for authentication, its just a placeholder to satisfy the schema
         "role": UserRole.GUEST.value,
         "disabled": False,
         "is_guest": True,
@@ -90,7 +90,7 @@ def create_guest_session(
 
     return {
         "access_token": access_token,
-        "token_type": "bearer",
+        "token_type": "bearer",  # nosec B105 - this is just a string in the response body, not an actual cookie or header
         "expires_in": expires_in,
         "user": _serialize_guest(user),
     }
