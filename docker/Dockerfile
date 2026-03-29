@@ -33,6 +33,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
     ghostscript \
+    inkscape \
     tesseract-ocr \
     libsm6 \
     libxext6 \
@@ -53,6 +54,14 @@ RUN apt-get update && \
     libreoffice-common \
     && rm -rf /var/lib/apt/lists/*
 
+# Inkscape's EPS import extension (ps_input.py) requires numpy and lxml
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3-numpy \
+    python3-lxml \
+    python3-tinycss2 \
+    python3-cssselect \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Pandoc from upstream GitHub releases to avoid stale distro packages.
 RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" && \

@@ -12,6 +12,7 @@ from .converter_interface import ConverterInterface
 from .archive_convert import ArchiveConverter
 from .calibre_convert import CalibreConverter
 from .ocrmypdf_convert import OCRmyPDFConverter
+from .inkscape_convert import VectorConverter
 
 __all__ = [
     "FFmpegConverter", 
@@ -27,5 +28,6 @@ __all__ = [
     "ArchiveConverter", 
     "CalibreConverter",
     "OCRmyPDFConverter",
+    "VectorConverter",
     "ConverterInterface",
     ]
