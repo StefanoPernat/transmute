@@ -20,7 +20,6 @@ class PySubs2Converter(ConverterInterface):
         'srt': 'srt',
         'sub': 'microdvd',
         'mpl': 'mpl2',
-        'tmp': 'tmp',
         'vtt': 'vtt',
     }
 

@@ -33,13 +33,11 @@ class PyPandocConverter(ConverterInterface):
         'rtf',
         'org',
         'textile',
-        'mediawiki',
         'adoc',
         'ipynb',
         'fb2',
         'muse',
         'opml',
-        'dbk',
     }
     supported_output_formats: set = {
         'md',
@@ -57,9 +55,7 @@ class PyPandocConverter(ConverterInterface):
         'pdf',
         'ipynb',
         'textile',
-        'mediawiki',
         'pptx',
-        'dbk',
         'muse',
         'opml',
     }
@@ -84,14 +80,12 @@ class PyPandocConverter(ConverterInterface):
         'rtf': 'rtf',
         'org': 'org',
         'textile': 'textile',
-        'mediawiki': 'mediawiki',
         'adoc': 'asciidoc',
         'pdf': 'pdf',
         'ipynb': 'ipynb',
         'fb2': 'fb2',
         'muse': 'muse',
         'opml': 'opml',
-        'dbk': 'docbook',
     }
     _pandoc_output_format_map = {
         'md': 'gfm',
@@ -106,14 +100,12 @@ class PyPandocConverter(ConverterInterface):
         'rtf': 'rtf',
         'org': 'org',
         'textile': 'textile',
-        'mediawiki': 'mediawiki',
         'adoc': 'asciidoc',
         'pdf': 'pdf',
         'ipynb': 'ipynb',
         'fb2': 'fb2',
         'muse': 'muse',
         'opml': 'opml',
-        'dbk': 'docbook',
         'pptx': 'pptx',
     }
 
