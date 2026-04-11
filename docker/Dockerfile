@@ -53,7 +53,7 @@ RUN apt-get update && \
     librsvg2-bin \
     tar \
     xz-utils \
-    unar \
+    unrar-free \
     libreoffice-impress \
     libreoffice-common \
     && rm -rf /var/lib/apt/lists/*
