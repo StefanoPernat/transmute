@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import FileTable, { FileInfo, ConversionInfo } from '../components/FileTable'
 import PreviewModal, { isPreviewable } from '../components/PreviewModal'
 import { authFetch as fetch } from '../utils/api'
 import { downloadBlob } from '../utils/download'
+import { stripExtension } from '../utils/filename'
 
 interface OriginalFileInfo {
   id: string
@@ -20,6 +22,7 @@ interface ConversionRecord {
   extension: string
   size_bytes: number
   created_at: string
+  quality?: string
   original_file?: OriginalFileInfo
 }
 
@@ -33,16 +36,17 @@ function History() {
   const [deletingSelected, setDeletingSelected] = useState(false)
   const [downloadingSelected, setDownloadingSelected] = useState(false)
   const [previewConversion, setPreviewConversion] = useState<ConversionRecord | null>(null)
+  const { t } = useTranslation()
 
   useEffect(() => {
     const fetchConversions = async () => {
       try {
         const response = await fetch('/api/conversions/complete')
-        if (!response.ok) throw new Error('Failed to fetch conversions')
+        if (!response.ok) throw new Error(t('history.fetchFailed'))
         const data = await response.json()
         setConversions(data.conversions)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load conversions')
+        setError(err instanceof Error ? err.message : t('history.loadFailed'))
       } finally {
         setLoading(false)
       }
@@ -56,11 +60,7 @@ function History() {
       const response = await fetch(`/api/files/${conversion.id}`)
       if (!response.ok) throw new Error('Download failed')
 
-      let filename = conversion.original_filename || 'download'
-      const lastDotIndex = filename.lastIndexOf('.')
-      if (lastDotIndex > 0) {
-        filename = filename.substring(0, lastDotIndex)
-      }
+      let filename = stripExtension(conversion.original_filename || 'download')
       filename += conversion.extension || ''
 
       const blob = await response.blob();
@@ -76,10 +76,10 @@ function History() {
     setDeletingId(conversionId)
     try {
       const response = await fetch(`/api/conversions/${conversionId}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('Delete failed')
+      if (!response.ok) throw new Error(t('history.deleteFailed'))
       setConversions(prev => prev.filter(c => c.id !== conversionId))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed')
+      setError(err instanceof Error ? err.message : t('history.deleteFailed'))
     } finally {
       setDeletingId(null)
     }
@@ -127,7 +127,7 @@ function History() {
 
     const errors = results
       .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-      .map(r => (r.reason instanceof Error ? r.reason.message : 'Delete failed'))
+      .map(r => (r.reason instanceof Error ? r.reason.message : t('history.deleteFailed')))
 
     if (errors.length > 0) {
       setError(errors.join('; '))
@@ -168,7 +168,7 @@ function History() {
     <div className="min-h-full bg-gradient-to-br from-surface-dark to-surface-light p-8 pb-12">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6 min-h-[4rem]">
-          <h1 className="text-3xl font-bold text-primary">History</h1>
+          <h1 className="text-3xl font-bold text-primary">{t('history.title')}</h1>
           <div className="flex gap-3">
             {selectedIds.size > 0 && (
               <>
@@ -177,14 +177,14 @@ function History() {
                   disabled={downloadingSelected}
                   className="bg-success hover:bg-success-dark text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {downloadingSelected ? 'Downloading...' : `Download ${selectedIds.size} File${selectedIds.size > 1 ? 's' : ''}`}
+                  {downloadingSelected ? t('history.downloadingSelected') : t('history.downloadSelected', { count: selectedIds.size })}
                 </button>
                 <button
                   onClick={handleDeleteSelected}
                   disabled={deletingSelected}
                   className="bg-primary/20 hover:bg-primary/40 text-primary-light font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {deletingSelected ? 'Deleting...' : `Delete ${selectedIds.size} File${selectedIds.size > 1 ? 's' : ''}`}
+                  {deletingSelected ? t('history.deleting') : t('history.deleteSelected', { count: selectedIds.size })}
                 </button>
               </>
             )}
@@ -198,11 +198,11 @@ function History() {
         )}
 
         {loading && (
-          <p className="text-text-muted text-sm">Loading conversions...</p>
+          <p className="text-text-muted text-sm">{t('history.loading')}</p>
         )}
 
         {!loading && conversions.length === 0 && (
-          <p className="text-text-muted text-sm">No converted files yet.</p>
+          <p className="text-text-muted text-sm">{t('history.noConversions')}</p>
         )}
 
         {!loading && conversions.length > 0 && (
@@ -224,6 +224,7 @@ function History() {
                 extension: conversion.extension,
                 size_bytes: conversion.size_bytes,
                 created_at: conversion.created_at,
+                quality: conversion.quality,
               }
               return {
                 id: conversion.id,
@@ -231,7 +232,7 @@ function History() {
                 conversion: conversionInfo,
                 onDownload: () => handleDownload(conversion),
                 onDelete: () => handleDelete(conversion.id),
-                onPreview: isPreviewable(conversion.media_type) ? () => { const name = conversion.original_filename || 'download'; const dot = name.lastIndexOf('.'); const base = dot > 0 ? name.substring(0, dot) : name; setPreviewConversion({ ...conversion, original_filename: base + (conversion.extension || '') }) } : undefined,
+                onPreview: isPreviewable(conversion.media_type) ? () => { const name = conversion.original_filename || 'download'; const base = stripExtension(name); setPreviewConversion({ ...conversion, original_filename: base + (conversion.extension || '') }) } : undefined,
                 isDeleting: deletingId === conversion.id,
                 isDownloading: downloadingId === conversion.id,
               }

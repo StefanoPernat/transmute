@@ -4,6 +4,7 @@ from typing import Literal, Optional
 
 class ConversionRequest(BaseModel):
     id: str = Field(..., example="123e4567-e89b-12d3-a456-426614174000", description="ID of file to convert")
+    quality: Optional[str] = Field(None, example="medium", description="Optional quality setting for conversion (e.g. low, medium, high)")
     output_format: str = Field(..., example="png", description="Target format for conversion")
 
 
@@ -16,11 +17,11 @@ class FileMetadata(BaseModel):
     size_bytes: int = Field(..., example=204800)
     sha256_checksum: str = Field(..., example="abc123def456...")
     user_id: str = Field(..., example="67118d71-a0c5-443c-80b5-e222bb63bfc2")
-    compatible_formats: list[str] = Field(..., example=["png", "gif", "webp"], description="List of compatible output formats")
+    compatible_formats: dict[str, list[str]] = Field(..., example={"png": [], "gif": [], "webp": ["low", "medium", "high"]}, description="Map of compatible output formats to their available quality options")
 
 
 class FileMetadataWithFormats(FileMetadata):
-    compatible_formats: list[str] = Field(..., example=["png", "gif", "webp"], description="List of compatible output formats")
+    compatible_formats: dict[str, list[str]] = Field(..., example={"png": [], "gif": [], "webp": ["low", "medium", "high"]}, description="Map of compatible output formats to their available quality options")
 
 
 class ConversionItem(BaseModel):
@@ -30,6 +31,7 @@ class ConversionItem(BaseModel):
     extension: str = Field(..., example=".png")
     size_bytes: int = Field(..., example=204800)
     sha256_checksum: str = Field(..., example="abc123def456...")
+    quality: Optional[str] = Field(None, example="medium", description="Quality setting used for this conversion")
     original_file: Optional[FileMetadata] = Field(None, description="Original file metadata")
 
 
@@ -40,6 +42,8 @@ class ConverterMetadata(BaseModel):
     name: str = Field(..., example="drawio_convert")
     supported_input_formats: list[str] = Field(..., example=["drawio"])
     supported_output_formats: list[str] = Field(..., example=["png", "pdf", "jpg"])
+    formats_with_qualities: list[str] = Field(..., example=["jpeg"], description="Output formats that support quality options")
+    qualities: list[str] = Field(..., example=["low", "medium", "high"], description="Available quality levels")
 
 class ConverterMetadataListResponse(BaseModel):
     converters: list[ConverterMetadata] = Field(..., description="List of the available converters")
@@ -85,7 +89,7 @@ class BatchDownloadRequest(BaseModel):
 
 
 ThemeValue = Literal["rubedo", "citrinitas", "viriditas", "nigredo", "albedo", "aurora", "caelum", "argentum"]
-UserRoleValue = Literal["admin", "member"]
+UserRoleValue = Literal["admin", "member", "guest"]
 
 
 class AppSettingsResponse(BaseModel):
@@ -114,6 +118,15 @@ class DefaultFormatListResponse(BaseModel):
     aliases: dict[str, str] = Field(..., description="Format alias map (e.g. jpg -> jpeg)")
 
 
+class DefaultQualityMapping(BaseModel):
+    output_format: str = Field(..., example="jpeg", description="Output file format")
+    quality: str = Field(..., example="high", description="Default quality level")
+
+
+class DefaultQualityListResponse(BaseModel):
+    defaults: list[DefaultQualityMapping] = Field(..., description="List of default quality mappings")
+
+
 class UserResponse(BaseModel):
     uuid: str = Field(..., example="123e4567-e89b-12d3-a456-426614174000", description="Stable user UUID")
     username: str = Field(..., example="alice", description="Unique account username")
@@ -121,6 +134,8 @@ class UserResponse(BaseModel):
     full_name: Optional[str] = Field(None, example="Alice Example", description="Optional full name")
     role: UserRoleValue = Field(..., example="member", description="Assigned role")
     disabled: bool = Field(..., example=False, description="Whether the account is disabled")
+    is_guest: bool = Field(False, example=False, description="Whether this is a guest account")
+    has_usable_password: bool = Field(True, example=True, description="Whether the account has a local password (false for OIDC-only accounts)")
 
 
 class UserListResponse(BaseModel):
@@ -195,3 +210,18 @@ class ApiKeyListResponse(BaseModel):
 
 class ApiKeyDeleteResponse(BaseModel):
     message: str = Field(..., description="Deletion status message")
+
+
+class UserStatsItem(BaseModel):
+    user_uuid: str = Field(..., example="123e4567-e89b-12d3-a456-426614174000", description="User UUID")
+    username: str = Field(..., example="alice", description="Username")
+    files_uploaded: int = Field(..., example=12, description="Number of files uploaded")
+    conversions: int = Field(..., example=8, description="Number of conversions performed")
+    storage_bytes: int = Field(..., example=10485760, description="Total storage used in bytes (uploads + conversions)")
+
+
+class StatsResponse(BaseModel):
+    total_files_uploaded: int = Field(..., example=42, description="Total files uploaded across all users")
+    total_conversions: int = Field(..., example=30, description="Total conversions across all users")
+    total_storage_bytes: int = Field(..., example=104857600, description="Total storage used in bytes across all users")
+    users: list[UserStatsItem] = Field(..., description="Per-user breakdown of stats")

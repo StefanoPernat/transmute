@@ -1,4 +1,5 @@
 import pytest
+import sqlite3
 from pathlib import Path
 from fastapi import HTTPException
 
@@ -10,6 +11,10 @@ from core.helper_functions import (
     validate_safe_path,
     sanitize_filename,
     delete_file_and_metadata,
+    compute_sha256_checksum,
+    get_file_extension,
+    assign_orphaned_rows_to_admin,
+    migrate_table_columns,
 )
 
 def test_validate_sql_identifier():
@@ -183,3 +188,113 @@ def test_delete_file_and_meta_file_must_follow_uuid(safe_path_test_settings, tmp
     })
     with pytest.raises(HTTPException):
         delete_file_and_metadata("hello", tmp_db)
+
+
+# ── compute_sha256_checksum ──────────────────────────────────────────
+
+def test_compute_sha256_checksum(tmp_path):
+    f = tmp_path / "data.bin"
+    f.write_bytes(b"hello world")
+    digest = compute_sha256_checksum(f)
+    assert digest == "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+
+def test_compute_sha256_checksum_empty_file(tmp_path):
+    f = tmp_path / "empty.bin"
+    f.write_bytes(b"")
+    digest = compute_sha256_checksum(f)
+    # SHA-256 of empty input
+    assert digest == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+def test_compute_sha256_checksum_accepts_string_path(tmp_path):
+    f = tmp_path / "str_path.bin"
+    f.write_bytes(b"test data")
+    digest = compute_sha256_checksum(str(f))
+    assert isinstance(digest, str) and len(digest) == 64
+
+
+# ── get_file_extension ───────────────────────────────────────────────
+
+@pytest.mark.parametrize("filename,expected", [
+    ("photo.png", "png"),
+    ("archive.tar.gz", "tar.gz"),
+    ("archive.tar.bz2", "tar.bz2"),
+    ("archive.tar.xz", "tar.xz"),
+    ("archive.tar.zst", "tar.zst"),
+    ("PHOTO.PNG", "png"),
+    ("noext", ""),
+    ("file.MP4", "mp4"),
+])
+def test_get_file_extension(filename, expected):
+    assert get_file_extension(filename) == expected
+
+
+# ── assign_orphaned_rows_to_admin ────────────────────────────────────
+
+def _setup_users_and_files(conn):
+    """Helper: create USERS and FILES tables for orphan-assignment tests."""
+    conn.execute("CREATE TABLE USERS (uuid TEXT, role TEXT)")
+    conn.execute("CREATE TABLE FILES (id TEXT, user_id TEXT)")
+
+def test_assign_orphaned_rows_to_admin_assigns(tmp_path):
+    conn = sqlite3.connect(":memory:")
+    _setup_users_and_files(conn)
+    conn.execute("INSERT INTO USERS VALUES ('admin-1', 'admin')")
+    conn.execute("INSERT INTO FILES VALUES ('f1', NULL)")
+    conn.execute("INSERT INTO FILES VALUES ('f2', NULL)")
+    assign_orphaned_rows_to_admin(conn, "FILES", "USERS")
+    rows = conn.execute("SELECT user_id FROM FILES").fetchall()
+    assert all(r[0] == "admin-1" for r in rows)
+
+def test_assign_orphaned_rows_no_orphans(tmp_path):
+    conn = sqlite3.connect(":memory:")
+    _setup_users_and_files(conn)
+    conn.execute("INSERT INTO USERS VALUES ('admin-1', 'admin')")
+    conn.execute("INSERT INTO FILES VALUES ('f1', 'user-1')")
+    assign_orphaned_rows_to_admin(conn, "FILES", "USERS")
+    row = conn.execute("SELECT user_id FROM FILES WHERE id='f1'").fetchone()
+    assert row[0] == "user-1"
+
+def test_assign_orphaned_rows_no_admin():
+    conn = sqlite3.connect(":memory:")
+    _setup_users_and_files(conn)
+    conn.execute("INSERT INTO FILES VALUES ('f1', NULL)")
+    # No admin user exists – orphans should remain NULL
+    assign_orphaned_rows_to_admin(conn, "FILES", "USERS")
+    row = conn.execute("SELECT user_id FROM FILES WHERE id='f1'").fetchone()
+    assert row[0] is None
+
+def test_assign_orphaned_rows_picks_first_admin():
+    conn = sqlite3.connect(":memory:")
+    _setup_users_and_files(conn)
+    conn.execute("INSERT INTO USERS VALUES ('admin-1', 'admin')")
+    conn.execute("INSERT INTO USERS VALUES ('admin-2', 'admin')")
+    conn.execute("INSERT INTO FILES VALUES ('f1', NULL)")
+    assign_orphaned_rows_to_admin(conn, "FILES", "USERS")
+    row = conn.execute("SELECT user_id FROM FILES WHERE id='f1'").fetchone()
+    assert row[0] == "admin-1"
+
+
+# ── migrate_table_columns ───────────────────────────────────────────
+
+def test_migrate_table_columns_adds_missing():
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE t (id TEXT)")
+    migrate_table_columns(conn, "t", {"name": "TEXT", "age": "INTEGER DEFAULT 0"})
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(t)").fetchall()}
+    assert "name" in cols
+    assert "age" in cols
+
+def test_migrate_table_columns_skips_existing():
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE t (id TEXT, name TEXT)")
+    # Should not raise even though 'name' already exists
+    migrate_table_columns(conn, "t", {"name": "TEXT", "extra": "TEXT"})
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(t)").fetchall()}
+    assert cols == {"id", "name", "extra"}
+
+def test_migrate_table_columns_noop_when_all_present():
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE t (id TEXT, name TEXT)")
+    migrate_table_columns(conn, "t", {"id": "TEXT", "name": "TEXT"})
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(t)").fetchall()}
+    assert cols == {"id", "name"}

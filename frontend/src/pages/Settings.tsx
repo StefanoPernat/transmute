@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTheme, type ThemeName } from '../ThemeContext'
 import { useAuth } from '../AuthContext'
+import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import FormatDropdown from '../components/FormatDropdown'
 import { authFetch as fetch } from '../utils/api'
 
 interface Theme {
@@ -15,10 +17,17 @@ interface DefaultFormatMapping {
   output_format: string
 }
 
+interface DefaultQualityMapping {
+  output_format: string
+  quality: string
+}
+
 interface ConverterInfo {
   name: string
   supported_input_formats: string[]
   supported_output_formats: string[]
+  formats_with_qualities: string[]
+  qualities: string[]
 }
 
 const THEMES: Theme[] = [
@@ -60,6 +69,7 @@ interface AppSettings {
 function Settings() {
   const { theme, setTheme, setKeepOriginals } = useTheme()
   const { isAdmin } = useAuth()
+  const { t } = useTranslation()
   const [autoDownload, setAutoDownload] = useState(false)
   const [saveOriginals, setSaveOriginals] = useState(true)
   const [cleanupEnabled, setCleanupEnabled] = useState(true)
@@ -86,12 +96,20 @@ function Settings() {
   const [newInputFormat, setNewInputFormat] = useState('')
   const [newOutputFormat, setNewOutputFormat] = useState('')
 
+  // Default quality mappings
+  const [defaultQualities, setDefaultQualities] = useState<DefaultQualityMapping[]>([])
+  const [qualityFormatsMap, setQualityFormatsMap] = useState<Record<string, string[]>>({})
+  const [newQualityFormat, setNewQualityFormat] = useState('')
+  const [newQuality, setNewQuality] = useState('')
+
   // Build conversion map from converters API (input_format -> sorted output_formats)
+  // and quality formats map (output_format -> sorted quality_options)
   const loadConversionMap = useCallback(() => {
     fetch('/api/converters')
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((data: { converters: ConverterInfo[] }) => {
         const map: Record<string, Set<string>> = {}
+        const qMap: Record<string, Set<string>> = {}
         for (const c of data.converters) {
           for (const inp of c.supported_input_formats) {
             for (const out of c.supported_output_formats) {
@@ -101,12 +119,24 @@ function Settings() {
               }
             }
           }
+          for (const fmt of (c.formats_with_qualities || [])) {
+            if (!qMap[fmt]) qMap[fmt] = new Set()
+            for (const q of (c.qualities || [])) {
+              qMap[fmt].add(q)
+            }
+          }
         }
         const sorted: Record<string, string[]> = {}
         for (const [k, v] of Object.entries(map)) {
           sorted[k] = [...v].sort()
         }
         setConversionMap(sorted)
+        const qualityOrder: Record<string, number> = { low: 0, medium: 1, high: 2 }
+        const sortedQ: Record<string, string[]> = {}
+        for (const [k, v] of Object.entries(qMap)) {
+          sortedQ[k] = [...v].sort((a, b) => (qualityOrder[a] ?? 99) - (qualityOrder[b] ?? 99))
+        }
+        setQualityFormatsMap(sortedQ)
       })
       .catch(() => {})
   }, [])
@@ -118,10 +148,17 @@ function Settings() {
       .catch(() => {})
   }, [])
 
+  const loadDefaultQualities = useCallback(() => {
+    fetch('/api/default-qualities')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((data: { defaults: DefaultQualityMapping[] }) => setDefaultQualities(data.defaults))
+      .catch(() => {})
+  }, [])
+
   // Load settings once on mount
   useEffect(() => {
     fetch('/api/settings')
-      .then(r => r.ok ? r.json() : Promise.reject('Failed to load settings'))
+      .then(r => r.ok ? r.json() : Promise.reject(t('settings.loadFailed')))
       .then((data: AppSettings) => {
         setTheme(data.theme as ThemeName)
         setAutoDownload(data.auto_download)
@@ -133,7 +170,8 @@ function Settings() {
       .catch(() => setLoaded(true)) // fall back to defaults silently
     loadConversionMap()
     loadDefaultFormats()
-  }, [setTheme, loadConversionMap, loadDefaultFormats])
+    loadDefaultQualities()
+  }, [setTheme, loadConversionMap, loadDefaultFormats, loadDefaultQualities])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -159,12 +197,12 @@ function Settings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!response.ok) throw new Error('Failed to save settings')
+      if (!response.ok) throw new Error(t('settings.saveFailed'))
       setKeepOriginals(saveOriginals)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      setError(err instanceof Error ? err.message : t('settings.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -183,7 +221,7 @@ function Settings() {
       setNewInputFormat('')
       setNewOutputFormat('')
     } catch {
-      setError('Failed to save default format')
+      setError(t('settings.saveFailed'))
     }
   }
 
@@ -197,7 +235,7 @@ function Settings() {
       if (!response.ok) throw new Error()
       loadDefaultFormats()
     } catch {
-      setError('Failed to update default format')
+      setError(t('settings.saveFailed'))
     }
   }
 
@@ -207,7 +245,48 @@ function Settings() {
       if (!response.ok) throw new Error()
       loadDefaultFormats()
     } catch {
-      setError('Failed to delete default format')
+      setError(t('settings.saveFailed'))
+    }
+  }
+
+  const handleAddDefaultQuality = async () => {
+    if (!newQualityFormat || !newQuality) return
+    try {
+      const response = await fetch('/api/default-qualities', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ output_format: newQualityFormat, quality: newQuality }),
+      })
+      if (!response.ok) throw new Error()
+      loadDefaultQualities()
+      setNewQualityFormat('')
+      setNewQuality('')
+    } catch {
+      setError(t('settings.saveFailed'))
+    }
+  }
+
+  const handleUpdateDefaultQuality = async (output_format: string, quality: string) => {
+    try {
+      const response = await fetch('/api/default-qualities', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ output_format, quality }),
+      })
+      if (!response.ok) throw new Error()
+      loadDefaultQualities()
+    } catch {
+      setError(t('settings.saveFailed'))
+    }
+  }
+
+  const handleDeleteDefaultQuality = async (output_format: string) => {
+    try {
+      const response = await fetch(`/api/default-qualities/${encodeURIComponent(output_format)}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error()
+      loadDefaultQualities()
+    } catch {
+      setError(t('settings.saveFailed'))
     }
   }
 
@@ -219,12 +298,20 @@ function Settings() {
   // When the new input format changes, auto-select the first available output
   const newOutputOptions = newInputFormat ? (conversionMap[newInputFormat] || []) : []
 
+  // Available output formats with quality options that don't already have a default set
+  const availableQualityFormats = Object.keys(qualityFormatsMap)
+    .filter(f => !defaultQualities.some(d => d.output_format === f))
+    .sort()
+
+  // When the new quality format changes, auto-select the first available quality
+  const newQualityOptions = newQualityFormat ? (qualityFormatsMap[newQualityFormat] || []) : []
+
   const handleClearConversions = () => {
     setConfirmDialog({
       isOpen: true,
-      title: 'Clear Conversion History?',
-      message: 'You are about to clear conversion history and delete converted files. This action cannot be undone. Do you wish to proceed?',
-      confirmLabel: 'Yes, Clear History',
+      title: t('confirm.clearConversionsTitle'),
+      message: t('confirm.clearConversionsMessage'),
+      confirmLabel: t('confirm.clearConversionsConfirm'),
       onConfirm: () => {
         setConfirmDialog(null)
         setClearConversionsStatus('clearing')
@@ -245,9 +332,9 @@ function Settings() {
   const handleClearUploads = () => {
     setConfirmDialog({
       isOpen: true,
-      title: 'Clear Uploaded Files?',
-      message: 'You are about to delete all uploaded files. This action cannot be undone. Do you wish to proceed?',
-      confirmLabel: 'Yes, Clear Files',
+      title: t('confirm.clearUploadsTitle'),
+      message: t('confirm.clearUploadsMessage'),
+      confirmLabel: t('confirm.clearUploadsConfirm'),
       onConfirm: () => {
         setConfirmDialog(null)
         setClearUploadsStatus('clearing')
@@ -269,7 +356,7 @@ function Settings() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-surface-dark to-surface-light p-8 flex items-start justify-start">
         <div className="max-w-4xl mx-auto w-full pt-8">
-          <p className="text-text-muted text-sm">Loading settings...</p>
+          <p className="text-text-muted text-sm">{t('settings.loadingSettings')}</p>
         </div>
       </div>
     )
@@ -279,7 +366,7 @@ function Settings() {
     <div className="min-h-screen bg-gradient-to-br from-surface-dark to-surface-light p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6 min-h-[4rem]">
-          <h1 className="text-3xl font-bold text-primary">Settings</h1>
+          <h1 className="text-3xl font-bold text-primary">{t('settings.title')}</h1>
         </div>
 
         {error && (
@@ -292,12 +379,12 @@ function Settings() {
 
           {/* Appearance */}
           <section className="bg-surface-light rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-text mb-4">Appearance</h2>
+            <h2 className="text-lg font-semibold text-text mb-4">{t('settings.appearance')}</h2>
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-text font-medium">Theme</p>
-                  <p className="text-text-muted text-sm">Choose the application color theme</p>
+                  <p className="text-text font-medium">{t('settings.theme')}</p>
+                  <p className="text-text-muted text-sm">{t('settings.themeDescription')}</p>
                 </div>
                 <div className="relative" ref={themeRef}>
                   <button
@@ -335,12 +422,12 @@ function Settings() {
 
           {/* Conversion */}
           <section className="bg-surface-light rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-text mb-4">Conversion</h2>
+            <h2 className="text-lg font-semibold text-text mb-4">{t('settings.conversion')}</h2>
             <div className="flex flex-col gap-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-text font-medium">Auto-download on Completion</p>
-                  <p className="text-text-muted text-sm">Automatically download files when conversion finishes</p>
+                  <p className="text-text font-medium">{t('settings.autoDownload')}</p>
+                  <p className="text-text-muted text-sm">{t('settings.autoDownloadDescription')}</p>
                 </div>
                 <button
                   onClick={() => setAutoDownload(v => !v)}
@@ -354,8 +441,8 @@ function Settings() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-text font-medium">Keep Original Files</p>
-                  <p className="text-text-muted text-sm">Retain uploaded source files after conversion</p>
+                  <p className="text-text font-medium">{t('settings.keepOriginals')}</p>
+                  <p className="text-text-muted text-sm">{t('settings.keepOriginalsDescription')}</p>
                 </div>
                 <button
                   onClick={() => setSaveOriginals(v => !v)}
@@ -369,9 +456,9 @@ function Settings() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-text font-medium">Cleanup TTL</p>
-                  <p className="text-text-muted text-sm">Automatically clean up uploads & conversions after a set time</p>
-                  {!isAdmin && <p className="text-text-muted text-xs italic mt-1">Managed by an administrator</p>}
+                  <p className="text-text font-medium">{t('settings.cleanupTtl')}</p>
+                  <p className="text-text-muted text-sm">{t('settings.cleanupTtlDescription')}</p>
+                  {!isAdmin && <p className="text-text-muted text-xs italic mt-1">{t('settings.cleanupAdminOnly')}</p>}
                 </div>
                 <button
                   onClick={() => setCleanupEnabled(v => !v)}
@@ -387,8 +474,8 @@ function Settings() {
               {cleanupEnabled && (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-text font-medium">Cleanup Interval</p>
-                  <p className="text-text-muted text-sm">Minutes before uploads & conversions are cleaned up</p>
+                  <p className="text-text font-medium">{t('settings.cleanupInterval')}</p>
+                  <p className="text-text-muted text-sm">{t('settings.cleanupIntervalDescription')}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className={`flex items-center bg-surface-dark border border-surface-light rounded-lg overflow-hidden ${!isAdmin ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -396,7 +483,7 @@ function Settings() {
                       onClick={() => setCleanupTtl(v => Math.max(1, v - 1))}
                       disabled={!isAdmin}
                       className="px-3 py-2 text-text-muted hover:text-text hover:bg-surface-light transition-colors duration-150 text-base leading-none select-none"
-                      aria-label="Decrease"
+                      aria-label={t('settings.decrease')}
                     >−</button>
                     <input
                       type="number"
@@ -411,10 +498,10 @@ function Settings() {
                       onClick={() => setCleanupTtl(v => Math.min(10080, v + 1))}
                       disabled={!isAdmin}
                       className="px-3 py-2 text-text-muted hover:text-text hover:bg-surface-light transition-colors duration-150 text-base leading-none select-none"
-                      aria-label="Increase"
+                      aria-label={t('settings.increase')}
                     >+</button>
                   </div>
-                  <span className="text-text-muted text-sm">min</span>
+                  <span className="text-text-muted text-sm">{t('settings.min')}</span>
                 </div>
               </div>
               )}
@@ -428,25 +515,25 @@ function Settings() {
               disabled={saving}
               className="bg-success hover:bg-success-dark text-white font-semibold py-2 px-8 rounded-lg transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
+              {saving ? t('account.saving') : saved ? t('settings.saved') : t('settings.saveChanges')}
             </button>
           </div>
 
           {/* Data Management */}
           <section className="bg-surface-light rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-text mb-4">Data Management</h2>
+            <h2 className="text-lg font-semibold text-text mb-4">{t('settings.dataManagement')}</h2>
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-text font-medium">Clear Conversions</p>
-                  <p className="text-text-muted text-sm">Delete all converted files and conversion history records</p>
+                  <p className="text-text font-medium">{t('settings.clearConversions')}</p>
+                  <p className="text-text-muted text-sm">{t('settings.clearConversionsDescription')}</p>
                 </div>
                 <button
                   onClick={handleClearConversions}
                   disabled={clearConversionsStatus === 'clearing'}
                   className="bg-primary/20 hover:bg-primary/40 text-primary-light font-semibold py-2 px-5 rounded-lg transition duration-200 shadow-md hover:shadow-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {clearConversionsStatus === 'clearing' ? 'Clearing...' : clearConversionsStatus === 'success' ? 'Cleared!' : clearConversionsStatus === 'error' ? 'Failed' : 'Clear History'}
+                  {clearConversionsStatus === 'clearing' ? t('settings.clearing') : clearConversionsStatus === 'success' ? t('settings.cleared') : clearConversionsStatus === 'error' ? t('settings.clearFailed') : t('settings.clearHistory')}
                 </button>
               </div>
 
@@ -454,15 +541,15 @@ function Settings() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-text font-medium">Clear Uploads</p>
-                  <p className="text-text-muted text-sm">Delete all uploaded files</p>
+                  <p className="text-text font-medium">{t('settings.clearUploads')}</p>
+                  <p className="text-text-muted text-sm">{t('settings.clearUploadsDescription')}</p>
                 </div>
                 <button
                   onClick={handleClearUploads}
                   disabled={clearUploadsStatus === 'clearing'}
                   className="bg-primary/20 hover:bg-primary/40 text-primary-light font-semibold py-2 px-5 rounded-lg transition duration-200 shadow-md hover:shadow-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {clearUploadsStatus === 'clearing' ? 'Clearing...' : clearUploadsStatus === 'success' ? 'Cleared!' : clearUploadsStatus === 'error' ? 'Failed' : 'Clear Files'}
+                  {clearUploadsStatus === 'clearing' ? t('settings.clearing') : clearUploadsStatus === 'success' ? t('settings.cleared') : clearUploadsStatus === 'error' ? t('settings.clearFailed') : t('settings.clearFiles')}
                 </button>
               </div>
             </div>
@@ -470,16 +557,16 @@ function Settings() {
 
           {/* Default Formats */}
           <section className="bg-surface-light rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-text mb-1">Default Formats</h2>
-            <p className="text-text-muted text-sm mb-4">Set default output formats for specific input file types. These can still be overridden per file.</p>
+            <h2 className="text-lg font-semibold text-text mb-1">{t('settings.defaultFormats')}</h2>
+            <p className="text-text-muted text-sm mb-4">{t('settings.defaultFormatsDescription')}</p>
 
             {defaultFormats.length > 0 && (
               <div className="mb-4 overflow-hidden rounded-lg border border-surface-dark">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-surface-dark">
-                      <th className="text-left text-text-muted font-medium px-4 py-2.5">Input Format</th>
-                      <th className="text-left text-text-muted font-medium px-4 py-2.5">Default Output</th>
+                      <th className="text-left text-text-muted font-medium px-4 py-2.5">{t('settings.inputFormat')}</th>
+                      <th className="text-left text-text-muted font-medium px-4 py-2.5">{t('settings.defaultOutput')}</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -488,21 +575,19 @@ function Settings() {
                       <tr key={d.input_format} className="border-t border-surface-dark">
                         <td className="px-4 py-2.5 text-text font-mono">{d.input_format}</td>
                         <td className="px-4 py-2.5">
-                          <select
+                          <FormatDropdown
                             value={d.output_format}
-                            onChange={e => handleUpdateDefaultFormat(d.input_format, e.target.value)}
-                            className="bg-surface-dark text-text border border-surface-light rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                          >
-                            {(conversionMap[d.input_format] || [d.output_format]).map(fmt => (
-                              <option key={fmt} value={fmt}>{fmt}</option>
-                            ))}
-                          </select>
+                            formats={conversionMap[d.input_format] || [d.output_format]}
+                            onChange={(format) => handleUpdateDefaultFormat(d.input_format, format)}
+                            title={`${d.input_format} -> ${d.output_format}`}
+                            triggerClassName="w-full max-w-[12rem] border border-surface-light bg-surface-dark px-3 py-1.5 text-text"
+                          />
                         </td>
                         <td className="px-2 py-2.5 text-center">
                           <button
                             onClick={() => handleDeleteDefaultFormat(d.input_format)}
                             className="text-text-muted hover:text-primary transition-colors duration-150 p-1"
-                            title="Remove default"
+                            title={t('settings.removeDefault')}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -517,44 +602,125 @@ function Settings() {
             )}
 
             {availableInputFormats.length > 0 ? (
-              <div className="flex items-center gap-3">
-                <select
+              <div className="flex flex-wrap items-center gap-3">
+                <FormatDropdown
                   value={newInputFormat}
-                  onChange={e => { setNewInputFormat(e.target.value); setNewOutputFormat('') }}
-                  className="bg-surface-dark text-text border border-surface-light rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-w-[140px]"
-                >
-                  <option value="">Input format...</option>
-                  {availableInputFormats.map(f => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
+                  formats={availableInputFormats}
+                  onChange={(format) => { setNewInputFormat(format); setNewOutputFormat('') }}
+                  placeholder={t('settings.inputFormatPlaceholder')}
+                  title={newInputFormat || 'Select input format'}
+                  triggerClassName="min-w-[10rem] border border-surface-light bg-surface-dark px-3 py-2 text-text"
+                />
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
-                <select
+                <FormatDropdown
                   value={newOutputFormat}
-                  onChange={e => setNewOutputFormat(e.target.value)}
+                  formats={newOutputOptions}
+                  onChange={setNewOutputFormat}
+                  placeholder={t('settings.outputFormatPlaceholder')}
+                  title={newOutputFormat || 'Select output format'}
                   disabled={!newInputFormat}
-                  className="bg-surface-dark text-text border border-surface-light rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-w-[140px] disabled:opacity-50"
-                >
-                  <option value="">Output format...</option>
-                  {newOutputOptions.map(f => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
+                  triggerClassName="min-w-[10rem] border border-surface-light bg-surface-dark px-3 py-2 text-text"
+                />
                 <button
                   onClick={handleAddDefaultFormat}
                   disabled={!newInputFormat || !newOutputFormat}
                   className="bg-primary/20 hover:bg-primary/40 text-primary-light font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add
+                  {t('settings.add')}
                 </button>
               </div>
             ) : defaultFormats.length > 0 ? (
-              <p className="text-text-muted text-sm">All available input formats have defaults configured.</p>
+              <p className="text-text-muted text-sm">{t('settings.allFormatsConfigured')}</p>
             ) : (
-              <p className="text-text-muted text-sm">Loading available formats...</p>
+              <p className="text-text-muted text-sm">{t('settings.loadingFormats')}</p>
             )}
+          </section>
+
+          {/* Default Qualities */}
+          <section className="bg-surface-light rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-text mb-1">{t('settings.defaultQualities')}</h2>
+            <p className="text-text-muted text-sm mb-4">{t('settings.defaultQualitiesDescription')}</p>
+
+            {defaultQualities.length > 0 && (
+              <div className="mb-4 overflow-hidden rounded-lg border border-surface-dark">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-surface-dark">
+                      <th className="text-left text-text-muted font-medium px-4 py-2.5">{t('settings.outputFormat')}</th>
+                      <th className="text-left text-text-muted font-medium px-4 py-2.5">{t('settings.defaultQuality')}</th>
+                      <th className="w-10" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {defaultQualities.map(d => (
+                      <tr key={d.output_format} className="border-t border-surface-dark">
+                        <td className="px-4 py-2.5 text-text font-mono">{d.output_format}</td>
+                        <td className="px-4 py-2.5">
+                          <FormatDropdown
+                            value={d.quality}
+                            formats={qualityFormatsMap[d.output_format] || [d.quality]}
+                            onChange={(quality) => handleUpdateDefaultQuality(d.output_format, quality)}
+                            title={`${d.output_format} quality: ${d.quality}`}
+                            triggerClassName="w-full max-w-[12rem] border border-surface-light bg-surface-dark px-3 py-1.5 text-text"
+                            presorted
+                          />
+                        </td>
+                        <td className="px-2 py-2.5 text-center">
+                          <button
+                            onClick={() => handleDeleteDefaultQuality(d.output_format)}
+                            className="text-text-muted hover:text-primary transition-colors duration-150 p-1"
+                            title={t('settings.removeDefault')}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {availableQualityFormats.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <FormatDropdown
+                  value={newQualityFormat}
+                  formats={availableQualityFormats}
+                  onChange={(format) => { setNewQualityFormat(format); setNewQuality('') }}
+                  placeholder={t('settings.outputFormatPlaceholder')}
+                  title={newQualityFormat || 'Select output format'}
+                  triggerClassName="min-w-[10rem] border border-surface-light bg-surface-dark px-3 py-2 text-text"
+                />
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+                <FormatDropdown
+                  value={newQuality}
+                  formats={newQualityOptions}
+                  onChange={setNewQuality}
+                  placeholder={t('settings.qualityPlaceholder')}
+                  title={newQuality || 'Select quality'}
+                  disabled={!newQualityFormat}
+                  triggerClassName="min-w-[10rem] border border-surface-light bg-surface-dark px-3 py-2 text-text"
+                  presorted
+                />
+                <button
+                  onClick={handleAddDefaultQuality}
+                  disabled={!newQualityFormat || !newQuality}
+                  className="bg-primary/20 hover:bg-primary/40 text-primary-light font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t('settings.add')}
+                </button>
+              </div>
+            ) : defaultQualities.length > 0 ? (
+              <p className="text-text-muted text-sm">{t('settings.allQualitiesConfigured')}</p>
+            ) : Object.keys(qualityFormatsMap).length === 0 ? (
+              <p className="text-text-muted text-sm">{t('settings.loadingFormats')}</p>
+            ) : null}
           </section>
 
         </div>
