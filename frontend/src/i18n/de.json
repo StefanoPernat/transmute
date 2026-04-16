@@ -218,6 +218,7 @@
   "stats": {
     "title": "Statistiken",
     "loadFailed": "Statistiken konnten nicht geladen werden",
+    "snapshotNotice": "Diese Werte sind nur eine aktuelle Momentaufnahme der Dateien, Konvertierungen und Speichernutzung auf diesem System. Es sind keine globalen Gesamtzahlen.",
     "totalUploads": "Gesamtzahl der Uploads",
     "totalConversions": "Gesamtzahl der Konvertierungen",
     "totalStorage": "Gesamter Speicherverbrauch",

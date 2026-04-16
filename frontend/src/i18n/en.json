@@ -218,6 +218,7 @@
   "stats": {
     "title": "Stats",
     "loadFailed": "Failed to load stats",
+    "snapshotNotice": "These stats are a current snapshot of files, conversions, and storage on this system. They are not global totals.",
     "totalUploads": "Total Uploads",
     "totalConversions": "Total Conversions",
     "totalStorage": "Total Storage",

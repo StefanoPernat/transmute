@@ -64,6 +64,10 @@ function Stats() {
           <h1 className="text-3xl font-bold text-primary">{t('stats.title')}</h1>
         </div>
 
+        <div className="mb-6 rounded-xl border border-surface-light bg-surface-light/50 px-4 py-3">
+          <p className="text-sm text-text-muted">{t('stats.snapshotNotice')}</p>
+        </div>
+
         {/* Summary cards */}
         <div className="grid gap-4 sm:grid-cols-3 mb-8">
           <div className="rounded-xl border border-surface-light bg-surface-light/70 p-5">
