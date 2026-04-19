@@ -19,8 +19,17 @@ class HttpDownloader(DownloaderInterface):
     def can_handle(self, url: str) -> bool:
         parsed = urlparse(url)
         return parsed.scheme in ("http", "https")
+    
+    def fix_url(self, url: str) -> str:
+        """Fixes commonly incorrect URLs, for example change GitHub URLs to raw content URLs."""
+        if "github.com" in url and not url.endswith(".git") and "/blob/" in url:
+            # Convert GitHub blob URLs to raw URLs
+            url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+        normalized = url.strip()
+        return normalized
 
     async def download(self, url: str, dest_dir: Path, filename_stem: str) -> DownloadResult:
+        url = self.fix_url(url)
         original_filename = _extract_filename_from_url(url)
         file_extension = get_file_extension(original_filename)
         unique_filename = filename_stem
